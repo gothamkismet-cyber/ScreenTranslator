@@ -1,0 +1,21 @@
+.tools/
+.nuget/
+**/bin/
+**/obj/
+artifacts/
+.tavernweave/
+models/**/*.onnx
+# Local planning/handoff files contain machine-specific context, not distributable product files.
+NEXT.md
+总设计案.md
+项目实现步骤蓝图.md
+测试与交付记录.md
+启动翻译软件.cmd
+settings.json
+credentials.dat
+diagnostics.jsonl*
+*.tmp
+.env
+.env.*
+*.user
+*.suo

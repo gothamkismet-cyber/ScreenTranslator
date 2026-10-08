@@ -1,0 +1,60 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- 软件图标：粉色圆角底 + 屏幕选区四角 + “A → 文”对话气泡。
+       同一份矢量同时用于程序内标志和 scripts/BuildIcon.ps1 生成的 Assets/AppIcon.ico；
+       64 像素以上用完整图，32–48 像素去掉 A 气泡，24 像素以下只保留“文”。文字已转成路径，不依赖字体。 -->
+  <LinearGradientBrush x:Key="AppIconBase" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#F77FBE" Offset="0" />
+    <GradientStop Color="#E23A8A" Offset="0.52" />
+    <GradientStop Color="#BE185D" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="AppIconGloss" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#45FFFFFF" Offset="0" />
+    <GradientStop Color="#00FFFFFF" Offset="0.58" />
+  </LinearGradientBrush>
+  <Pen x:Key="AppIconRim" Brush="#33FFFFFF" Thickness="2" />
+  <Geometry x:Key="AppIconShape">M64,8 H192 A56,56 0 0 1 248,64 V192 A56,56 0 0 1 192,248 H64 A56,56 0 0 1 8,192 V64 A56,56 0 0 1 64,8 Z</Geometry>
+  <Geometry x:Key="AppIconInnerRim">M64,10 H192 A54,54 0 0 1 246,64 V192 A54,54 0 0 1 192,246 H64 A54,54 0 0 1 10,192 V64 A54,54 0 0 1 64,10 Z</Geometry>
+
+  <DrawingImage x:Key="AppIconLarge">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="Transparent" Geometry="M0,0 H256 V256 H0 Z" />
+        <GeometryDrawing Brush="{StaticResource AppIconBase}" Geometry="{StaticResource AppIconShape}" />
+        <GeometryDrawing Brush="{StaticResource AppIconGloss}" Geometry="{StaticResource AppIconShape}" />
+        <GeometryDrawing Pen="{StaticResource AppIconRim}" Geometry="{StaticResource AppIconInnerRim}" />
+        <GeometryDrawing Geometry="M38,72 L38,52 A14,14 0 0 1 52,38 L72,38 M184,38 L204,38 A14,14 0 0 1 218,52 L218,72 M218,184 L218,204 A14,14 0 0 1 204,218 L184,218 M72,218 L52,218 A14,14 0 0 1 38,204 L38,184">
+          <GeometryDrawing.Pen><Pen Brush="White" Thickness="12" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#55FFFFFF" Geometry="F1 M76,56 H116 A18,18 0 0 1 134,74 V110 A18,18 0 0 1 116,128 H76 A18,18 0 0 1 58,110 V74 A18,18 0 0 1 76,56 Z M68,124 L60,144 L88,128 Z" />
+        <GeometryDrawing Brush="White" Geometry="F1M95.83,79.84C95.74,80.95,95.52,82.05,95.17,83.14L91.06,95.96 100.73,95.96 96.67,83.25C96.37,82.3,96.16,81.16,96.04,79.84L95.83,79.84z M91.11,73.09L101.21,73.09 114.65,110.91 105.37,110.91 102.68,102.49 89.24,102.49 86.57,110.91 77.35,110.91 91.11,73.09z" />
+        <GeometryDrawing Brush="#4D9D174D" Geometry="F1 M136,118 H178 A20,20 0 0 1 198,138 V180 A20,20 0 0 1 178,200 H136 A20,20 0 0 1 116,180 V138 A20,20 0 0 1 136,118 Z" />
+        <GeometryDrawing Brush="White" Geometry="F1 M136,112 H178 A20,20 0 0 1 198,132 V174 A20,20 0 0 1 178,194 H136 A20,20 0 0 1 116,174 V132 A20,20 0 0 1 136,112 Z" />
+        <GeometryDrawing Brush="#DB2777" Geometry="F1M146.74,140.68C148.82,147.3 152.19,153.02 156.85,157.84 161.55,153 164.9,147.28 166.9,140.68L146.74,140.68z M159.66,123C161.18,127.02,162.33,130.18,163.12,132.5L186.18,132.5 186.18,140.68 177.19,140.68C174.14,149.84 169.76,157.58 164.02,163.9 170.24,168.2 177.91,171.48 187.03,173.74 183.68,177.81 181.46,180.78 180.37,182.64 171.15,179.55 163.32,175.47 156.88,170.41 150.4,175.29 142.45,179.49 133.02,183 130.84,179.49 128.83,176.56 126.97,174.22 136.03,171.4 143.62,167.9 149.73,163.75 143.92,157.27 139.8,149.58 137.38,140.68L127.63,140.68 127.63,132.5 152.94,132.5C152.32,130.45,151.47,127.9,150.4,124.88L159.66,123z" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+  <DrawingImage x:Key="AppIconMedium">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="Transparent" Geometry="M0,0 H256 V256 H0 Z" />
+        <GeometryDrawing Brush="{StaticResource AppIconBase}" Geometry="{StaticResource AppIconShape}" />
+        <GeometryDrawing Brush="{StaticResource AppIconGloss}" Geometry="{StaticResource AppIconShape}" />
+        <GeometryDrawing Geometry="M36,78 L36,54 A18,18 0 0 1 54,36 L78,36 M178,36 L202,36 A18,18 0 0 1 220,54 L220,78 M220,178 L220,202 A18,18 0 0 1 202,220 L178,220 M78,220 L54,220 A18,18 0 0 1 36,202 L36,178">
+          <GeometryDrawing.Pen><Pen Brush="White" Thickness="18" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="White" Geometry="F1M109.46,105.74C113.22,117.7 119.3,128.04 127.73,136.75 136.22,128 142.27,117.66 145.88,105.74L109.46,105.74z M132.81,73.8C135.55,81.06,137.62,86.78,139.05,90.98L180.72,90.98 180.72,105.74 164.48,105.74C158.97,122.29 151.04,136.28 140.69,147.69 151.92,155.45 165.77,161.38 182.25,165.46 176.2,172.83 172.19,178.18 170.22,181.54 153.56,175.96 139.41,168.6 127.78,159.45 116.08,168.27 101.71,175.85 84.69,182.2 80.75,175.85 77.1,170.57 73.75,166.34 90.12,161.23 103.83,154.92 114.88,147.41 104.38,135.71 96.94,121.82 92.56,105.74L74.95,105.74 74.95,90.98 120.67,90.98C119.54,87.26,118.01,82.66,116.08,77.2L132.81,73.8z" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+  <DrawingImage x:Key="AppIconSmall">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="Transparent" Geometry="M0,0 H256 V256 H0 Z" />
+        <GeometryDrawing Brush="{StaticResource AppIconBase}" Geometry="M60,4 H196 A56,56 0 0 1 252,60 V196 A56,56 0 0 1 196,252 H60 A56,56 0 0 1 4,196 V60 A56,56 0 0 1 60,4 Z" />
+        <GeometryDrawing Brush="White" Geometry="F1M99.53,94.82C105.3,113.18 114.65,129.06 127.58,142.44 140.63,129 149.92,113.13 155.46,94.82L99.53,94.82z M135.39,45.77C139.59,56.91,142.78,65.7,144.96,72.14L208.96,72.14 208.96,94.82 184.02,94.82C175.56,120.24 163.39,141.71 147.48,159.23 164.73,171.16 186.01,180.26 211.31,186.53 202.02,197.84 195.86,206.07 192.84,211.22 167.25,202.65 145.52,191.34 127.66,177.29 109.69,190.84 87.63,202.49 61.48,212.23 55.44,202.49 49.84,194.37 44.69,187.87 69.83,180.03 90.88,170.35 107.84,158.81 91.72,140.84 80.3,119.51 73.58,94.82L46.54,94.82 46.54,72.14 116.75,72.14C115.01,66.43,112.66,59.38,109.69,50.98L135.39,45.77z" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+</ResourceDictionary>

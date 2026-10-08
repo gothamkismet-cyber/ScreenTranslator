@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "det.onnx",
+    "Source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx",
+    "Sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae",
+    "Bytes": 4819576,
+    "CharacterDictionary": "Extracted from this ONNX file character metadata",
+    "License": "Apache-2.0; see THIRD_PARTY_NOTICES.md"
+  },
+  {
+    "Name": "cls.onnx",
+    "Source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/cls/ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx",
+    "Sha256": "54379ae5174d026780215fc748a7f31910dee36818e63d49e17dc598ecc82df7",
+    "Bytes": 1018508,
+    "CharacterDictionary": "Extracted from this ONNX file character metadata",
+    "License": "Apache-2.0; see THIRD_PARTY_NOTICES.md"
+  },
+  {
+    "Name": "en-rec.onnx",
+    "Source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/en_PP-OCRv5_rec_mobile.onnx",
+    "Sha256": "c3461add59bb4323ecba96a492ab75e06dda42467c9e3d0c18db5d1d21924be8",
+    "Bytes": 7872351,
+    "CharacterDictionary": "Extracted from this ONNX file character metadata",
+    "License": "Apache-2.0; see THIRD_PARTY_NOTICES.md"
+  },
+  {
+    "Name": "ja-rec.onnx",
+    "Source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx",
+    "Sha256": "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5",
+    "Bytes": 16631306,
+    "CharacterDictionary": "Extracted from this ONNX file character metadata",
+    "License": "Apache-2.0; see THIRD_PARTY_NOTICES.md"
+  },
+  {
+    "Name": "ko-rec.onnx",
+    "Source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/korean_PP-OCRv5_rec_mobile.onnx",
+    "Sha256": "cd6e2ea50f6943ca7271eb8c56a877a5a90720b7047fe9c41a2e541a25773c9b",
+    "Bytes": 13488748,
+    "CharacterDictionary": "Extracted from this ONNX file character metadata",
+    "License": "Apache-2.0; see THIRD_PARTY_NOTICES.md"
+  }
+]
