@@ -78,6 +78,7 @@ public static class RegionSelector
                 SetWindowPos(hwnd, new IntPtr(-1), screen.X, screen.Y, screen.Width, screen.Height, 0x0040);
             };
             PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) _done.TrySetResult(null); };
+            Closing += (_, _) => _done.TrySetResult(null);
             MouseRightButtonUp += (_, _) => _done.TrySetResult(null);
             MouseLeftButtonDown += (_, e) => { _start = e.GetPosition(_canvas); CaptureMouse(); _hintCard.Opacity = 0.35; };
             MouseMove += (_, e) =>

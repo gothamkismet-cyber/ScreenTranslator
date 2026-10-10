@@ -28,6 +28,20 @@
         <Border x:Name="TitleBar" Background="Transparent" Padding="14,10,8,8" Cursor="SizeAll" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
           <DockPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Cursor="Arrow">
+              <Button x:Name="MainButton" Content="&#xE80F;" Style="{StaticResource IconButton}" ToolTip="打开主界面" Click="Main_Click"/>
+              <Button x:Name="MoreButton" Content="&#xE712;" Style="{StaticResource IconButton}" ToolTip="选择范围、设置与退出" Click="More_Click">
+                <Button.ContextMenu>
+                  <ContextMenu x:Name="MoreMenu">
+                    <MenuItem Header="选择窗口" Click="Window_Click"/>
+                    <MenuItem Header="框选区域" Click="Region_Click"/>
+                    <MenuItem Header="翻译一次 / 刷新" Click="Refresh_Click"/>
+                    <MenuItem Header="连接与设置" Click="Settings_Click"/>
+                    <Separator/>
+                    <MenuItem Header="打开主界面" Click="Main_Click"/>
+                    <MenuItem x:Name="ExitMenuItem" Header="退出软件" Click="Exit_Click"/>
+                  </ContextMenu>
+                </Button.ContextMenu>
+              </Button>
               <CheckBox x:Name="PinCheck" Content="置顶" Style="{StaticResource PinToggle}" IsChecked="True" Checked="Pin_Changed" Unchecked="Pin_Changed" VerticalAlignment="Center" Margin="0,0,4,0"/>
               <Button Content="&#xE8BB;" Style="{StaticResource IconButton}" ToolTip="隐藏悬浮窗" Click="Hide_Click"/>
             </StackPanel>
@@ -57,7 +71,7 @@
             <Button x:Name="CopyButton" Content="复制译文" display:ThemeAssist.Glyph="&#xE8C8;" Style="{StaticResource CompactButton}" Click="Copy_Click" Margin="0"/>
           </StackPanel>
           <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{StaticResource InputBorder}" VerticalAlignment="Center" Margin="1,0,9,0" DockPanel.Dock="Left"><Ellipse.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard><Storyboard RepeatBehavior="Forever" AutoReverse="True" Timeline.DesiredFrameRate="12"><DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.3" Duration="0:0:1.1"><DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut" /></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard></EventTrigger></Ellipse.Triggers></Ellipse>
-          <TextBlock x:Name="StatusText" Style="{StaticResource Caption}" VerticalAlignment="Center" Text="准备开始" Margin="0,0,10,0"/>
+          <TextBlock x:Name="StatusText" Style="{StaticResource Caption}" VerticalAlignment="Center" Text="准备开始" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,0,10,0"/>
         </DockPanel>
       </Grid>
     </Border>

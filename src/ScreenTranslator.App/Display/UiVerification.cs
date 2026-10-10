@@ -31,12 +31,23 @@ internal static class UiVerification
             ((TextBlock)main.FindName("StatusText")).Text = "界面验证示例 · 此处中文为测试夹具，未调用真实 AI。";
             main.UpdateLayout(); Render(main, Path.Combine(output, "main-preview.png"));
             rows.Add(new { check = "main window initialized with manual model and readable original/translation controls", passed = true, dpiScale = VisualTreeHelper.GetDpi(main).DpiScaleX });
-            floating = new FloatingWindow { Owner = main, Left = main.Left + 50, Top = main.Top + 50 };
+            floating = new FloatingWindow { Left = main.Left + 50, Top = main.Top + 50 };
             floating.Apply(new AppSettings()); floating.Update(new SessionView(0, 0, true, "Do not delete this file. You have 250 gold coins.", "请不要删除这个文件。你有 250 枚金币。", "界面测试夹具 · 未调用真实 AI", 0, 0, 90, null)); floating.Show();
             await Task.Delay(150); Render(floating, Path.Combine(output, "floating-preview.png"));
             ((CheckBox)floating.FindName("PinCheck")).IsChecked = false; var pinOff = !floating.Topmost; ((CheckBox)floating.FindName("PinCheck")).IsChecked = true;
             floating.Close(); var closeHides = !floating.IsVisible;
             rows.Add(new { check = "floating pin and close-to-hide", passed = pinOff && floating.Topmost && closeHides, captureExcluded = floating.CaptureExcluded }); passed &= pinOff && floating.Topmost && closeHides;
+
+            var picker = new Capture.WindowSelector([]) { Owner = main };
+            picker.Show(); await Task.Delay(100);
+            // Only synthetic titles go into this screenshot, never the user's actual window list.
+            var windowList = (ListBox)picker.FindName("WindowList");
+            windowList.ItemsSource = new[] { new Capture.WindowTarget(IntPtr.Zero, 0, 0, "浏览器 · 英语阅读示例"), new Capture.WindowTarget(new IntPtr(1), 0, 0, "游戏窗口 · 日语示例"), new Capture.WindowTarget(new IntPtr(2), 0, 0, "其他软件 · 韩语示例") };
+            windowList.SelectedIndex = 0;
+            ((TextBlock)picker.FindName("HintText")).Text = "界面样例 · 列表只含合成窗口名称；实际选择窗口另有流程测试。";
+            picker.UpdateLayout(); Render(picker, Path.Combine(output, "window-picker-preview.png"));
+            var pickerOkay = ((Button)picker.FindName("UseButton")).IsEnabled;
+            picker.Close(); rows.Add(new { check = "window picker layout with synthetic names and selection enabled", passed = pickerOkay }); passed &= pickerOkay;
 
             var screen = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
             var selection = new Capture.RegionSelector.SelectionWindow(screen, new TaskCompletionSource<System.Drawing.Rectangle?>());
@@ -91,7 +102,7 @@ internal static class UiVerification
         {
             floating?.CloseForShutdown();
             File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new { test = "Actual WPF initialization, interactions and rendered previews; only synthetic data and isolated settings", utcTime = DateTimeOffset.UtcNow, passed, rows }, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
-            main.Close();
+            main.ExitApplication(passed ? 0 : 1);
             await Task.Delay(200);
             System.Windows.Application.Current.Shutdown(passed ? 0 : 1);
         }

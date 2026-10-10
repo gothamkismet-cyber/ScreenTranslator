@@ -25,14 +25,18 @@ public partial class MainWindow : Window
     private readonly SemaphoreSlim _operation = new(1, 1);
     private readonly SemaphoreSlim _captureGate = new(1, 1);
     private Rectangle? _region;
+    private WindowTarget? _windowTarget;
     private string _topology = "";
     private CancellationTokenSource? _captureCancel;
     private Task _captureTask = Task.CompletedTask;
     private HotkeyManager? _hotkeys;
+    private TrayIcon? _tray;
     private bool _ready;
     private bool _closing;
     private bool _closed;
     private bool _allowClose;
+    private bool _exitRequested;
+    private int _exitCode;
     private bool _captureExcluded;
     private bool _canSave = true;
     private bool _singleRun;
@@ -53,9 +57,14 @@ public partial class MainWindow : Window
         }
         _session = new TranslationSession(_client, new DiagnosticLog(_store.Root));
         _floating = new FloatingWindow();
-        Loaded += (_, _) => { if (_floating.Owner is null) _floating.Owner = this; };
         _floating.Apply(_bundle.Settings);
         _floating.PauseRequested += () => Toggle_Click(this, new RoutedEventArgs());
+        _floating.MainRequested += ShowMainWindow;
+        _floating.ExitRequested += ExitApplication;
+        _floating.WindowRequested += () => SelectWindow_Click(this, new RoutedEventArgs());
+        _floating.RegionRequested += () => SelectRegion_Click(this, new RoutedEventArgs());
+        _floating.RefreshRequested += () => Read_Click(this, new RoutedEventArgs());
+        _floating.SettingsRequested += () => Settings_Click(this, new RoutedEventArgs());
         _session.Changed += Session_Changed;
         ReloadPickers();
         if (loadingError is not null) StatusText.Text = loadingError;
@@ -66,6 +75,7 @@ public partial class MainWindow : Window
             _hotkeys.Pressed += Hotkey_Pressed;
             ApplyHotkeys();
             HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)!.AddHook(DisplayHook);
+            _tray = new TrayIcon(Dispatcher, ShowMainWindow, ShowFloatingWindow, () => Toggle_Click(this, new RoutedEventArgs()), ExitApplication);
         };
         Closing += ClosingAsync;
         _ready = true;
@@ -120,13 +130,16 @@ public partial class MainWindow : Window
         if (_closing) return;
         await _operation.WaitAsync();
         var floatingVisible = _floating.IsVisible;
+        var mainVisible = IsVisible;
         try
         {
+            if (_closing) return;
             _singleRun = false; _session.Pause(); await StopCaptureAsync();
             Hide(); _floating.Hide();
             var selected = await RegionSelector.SelectAsync();
             if (selected is { } region)
             {
+                _windowTarget = null;
                 _region = region; _topology = DisplayTopology.Fingerprint();
                 _session.Pause("选区已就绪，可以开始或翻译一次。", clearContent: true);
                 ShowRegion($"{region.Width} × {region.Height} 像素", selected: true); RegionPreview.Source = null;
@@ -135,12 +148,32 @@ public partial class MainWindow : Window
             }
             else StatusText.Text = _region is null ? "已取消选区。" : "已取消，保留原选区。";
         }
-        catch (Exception error) { StatusText.Text = SafeMessage(error); }
+        catch (Exception error) { _session.Pause(SafeMessage(error)); }
         finally
         {
-            if (!_closing) { Show(); Activate(); if (floatingVisible) _floating.Show(); }
+            if (!_closing) { if (mainVisible) ShowMainWindow(); if (floatingVisible) _floating.Show(); }
             _operation.Release();
         }
+    }
+    private async void SelectWindow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_closing) return;
+        await _operation.WaitAsync();
+        try
+        {
+            if (_closing) return;
+            _singleRun = false; _session.Pause("选择窗口期间已暂停。"); await StopCaptureAsync();
+            var selector = new WindowSelector(OwnWindowHandles()) { Owner = IsVisible ? this : _floating, Topmost = true };
+            if (selector.ShowDialog() == true && selector.SelectedTarget is { } target)
+            {
+                _windowTarget = target; _region = null; RegionPreview.Source = null;
+                ShowRegion("窗口 · " + target.Title, selected: true);
+                _session.Pause("窗口已选好，点击开始翻译它当前可见的文字。", clearContent: true);
+            }
+            else _session.Pause("已取消，保留原来的翻译范围。");
+        }
+        catch (Exception error) { _session.Pause(SafeMessage(error)); }
+        finally { _operation.Release(); }
     }
     private async void Toggle_Click(object sender, RoutedEventArgs e)
     {
@@ -150,13 +183,14 @@ public partial class MainWindow : Window
         await _operation.WaitAsync();
         try
         {
+            if (_closing) return;
             await StopCaptureAsync();
             RequireRegion(); BindSelected(); _singleRun = false; _session.Start();
             _floating.Apply(_bundle.Settings); _floating.Show();
             _captureCancel = new CancellationTokenSource();
             _captureTask = CaptureLoopAsync(_captureCancel.Token, (SourceLanguage)LanguagePicker.SelectedIndex);
         }
-        catch (Exception error) { StatusText.Text = SafeMessage(error); }
+        catch (Exception error) { _session.Pause(SafeMessage(error)); }
         finally { _operation.Release(); }
     }
     private async Task CaptureLoopAsync(CancellationToken token, SourceLanguage language)
@@ -181,6 +215,7 @@ public partial class MainWindow : Window
         ReadButton.IsEnabled = false;
         try
         {
+            if (_closing) return;
             RequireRegion();
             if (_session.Paused) { await StopCaptureAsync(); BindSelected(); _singleRun = true; _session.Start(); }
             var language = (SourceLanguage)LanguagePicker.SelectedIndex;
@@ -192,12 +227,28 @@ public partial class MainWindow : Window
         finally { ReadButton.IsEnabled = true; _operation.Release(); }
     }
     // Once a region exists the first-use steps are done; hiding them leaves room for the live metrics.
-    private void ShowRegion(string text, bool selected) { RegionText.Text = text; FirstUseGuide.Visibility = selected ? Visibility.Collapsed : Visibility.Visible; }
+    private void ShowRegion(string text, bool selected) { RegionText.Text = text; RegionText.ToolTip = text; FirstUseGuide.Visibility = selected ? Visibility.Collapsed : Visibility.Visible; }
+    private HashSet<IntPtr> OwnWindowHandles() => [new WindowInteropHelper(this).Handle, new WindowInteropHelper(_floating).Handle];
+    private HashSet<IntPtr> CaptureExclusions()
+    {
+        var handles = new HashSet<IntPtr>();
+        if (_captureExcluded) handles.Add(new WindowInteropHelper(this).Handle);
+        if (_floating.CaptureExcluded) handles.Add(new WindowInteropHelper(_floating).Handle);
+        return handles;
+    }
     private void RequireRegion()
     {
         if (ProfilePicker.IsDropDownOpen || LanguagePicker.IsDropDownOpen) throw new ArgumentException("请先关闭语言或连接菜单，再开始或刷新。");
-        if (_region is null) throw new ArgumentException("请先点击“选择屏幕区域”，拖动框选需要翻译的文字。");
-        if (_topology != DisplayTopology.Fingerprint()) { _region = null; ShowRegion("请重新选区", selected: false); throw new ArgumentException("显示器或缩放已改变，请重新选择屏幕区域。"); }
+        if (_windowTarget is { } target)
+        {
+            _region = WindowTargets.RequireVisibleArea(target, CaptureExclusions());
+            ShowRegion($"窗口 · {target.Title} · {_region.Value.Width} × {_region.Value.Height}", selected: true);
+        }
+        else
+        {
+            if (_region is null) throw new ArgumentException("请先选择要翻译的窗口，或框选一块屏幕区域。");
+            if (_topology != DisplayTopology.Fingerprint()) { _region = null; ShowRegion("请重新选区", selected: false); throw new ArgumentException("显示器或缩放已改变，请重新选择屏幕区域。"); }
+        }
         if (!_captureExcluded && DisplayTopology.Overlaps(this, _region.Value) || !_floating.CaptureExcluded && DisplayTopology.Overlaps(_floating, _region.Value)) throw new ArgumentException("当前系统没有成功排除翻译窗口，请将主窗口和悬浮窗移出选区后再开始。");
     }
     private async Task ReadRegionAsync(SourceLanguage language, bool force, CancellationToken token)
@@ -208,7 +259,9 @@ public partial class MainWindow : Window
             token.ThrowIfCancellationRequested(); RequireRegion();
             var region = _region!.Value;
             var epoch = _session.Current.Epoch;
-            using var image = await Task.Run(() => ScreenCapture.Capture(region), token);
+            var target = _windowTarget;
+            var excluded = CaptureExclusions();
+            using var image = await Task.Run(() => target is null ? ScreenCapture.Capture(region) : WindowTargets.Capture(target, excluded), token);
             var reading = await _ocr.ReadAsync(image, language, token);
             token.ThrowIfCancellationRequested();
             if (epoch != _session.Current.Epoch || _session.Paused) return;
@@ -222,6 +275,7 @@ public partial class MainWindow : Window
             }
             _session.Observe(reading.Text, reading.Elapsed.TotalMilliseconds, force);
         }
+        catch (WindowFrameChangedException) { /* Discard a moving frame; the next capture follows the new bounds. */ }
         finally { _captureGate.Release(); }
     }
     private async Task StopCaptureAsync()
@@ -257,19 +311,31 @@ public partial class MainWindow : Window
         try
         {
             await StopCaptureAsync();
-            var window = new SettingsWindow(_bundle) { Owner = this };
+            var window = new SettingsWindow(_bundle) { Owner = IsVisible ? this : _floating };
             if (window.ShowDialog() == true)
             {
                 _store.Save(window.Result); _bundle = window.Result; _canSave = true;
                 ReloadPickers(); _floating.Apply(_bundle.Settings); ApplyHotkeys();
                 if (ProfilePicker.SelectedItem is ApiProfile) BindSelected();
-                StatusText.Text = "设置已保存。选择区域后开始；修改快捷键时请留意冲突提示。";
+                _session.Pause("设置已保存。选择窗口或框选区域后开始；修改快捷键时请留意冲突提示。");
             }
         }
-        catch (Exception error) { StatusText.Text = SafeMessage(error); }
+        catch (Exception error) { _session.Pause(SafeMessage(error)); }
         finally { _operation.Release(); }
     }
-    private void Floating_Click(object sender, RoutedEventArgs e) { if (_floating.IsVisible) _floating.Hide(); else { _floating.Apply(_bundle.Settings); _floating.Update(_session.Current); _floating.Show(); } }
+    private void Floating_Click(object sender, RoutedEventArgs e) { if (_floating.IsVisible) _floating.Hide(); else ShowFloatingWindow(); }
+    private void ShowFloatingWindow() { if (_closing) return; _floating.Apply(_bundle.Settings); _floating.Update(_session.Current); _floating.Show(); }
+    public void ShowMainWindow() { if (_closing) return; Show(); if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal; Activate(); }
+    private void Exit_Click(object sender, RoutedEventArgs e) => ExitApplication();
+    public void ExitApplication() => ExitApplication(0);
+    public void ExitApplication(int exitCode)
+    {
+        if (_closing) return;
+        _exitCode = exitCode;
+        _exitRequested = true;
+        foreach (var dialog in OwnedWindows.Cast<Window>().Concat(_floating.OwnedWindows.Cast<Window>()).Concat(System.Windows.Application.Current.Windows.OfType<RegionSelector.SelectionWindow>()).ToArray()) dialog.Close();
+        Close();
+    }
     private void ApplyHotkeys()
     {
         try
@@ -289,7 +355,7 @@ public partial class MainWindow : Window
     }
     private IntPtr DisplayHook(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if ((message == 0x007E || message == 0x02E0) && _region is not null)
+        if ((message == 0x007E || message == 0x02E0) && _windowTarget is null && _region is not null)
             Dispatcher.InvokeAsync(() => { _region = null; ShowRegion("请重新选区", selected: false); _singleRun = false; _session.Pause("显示器或缩放发生变化，已暂停。请重新选区。", clearContent: true); _captureCancel?.Cancel(); RegionPreview.Source = null; });
         return IntPtr.Zero;
     }
@@ -298,6 +364,12 @@ public partial class MainWindow : Window
     {
         if (_allowClose) return;
         e.Cancel = true;
+        if (!_exitRequested)
+        {
+            Hide();
+            // Keep the translation session and hotkeys alive. The tray and floating window can restore this UI.
+            return;
+        }
         if (_closing) return;
         _closing = true; _singleRun = false; _session.Pause("正在关闭…"); _captureCancel?.Cancel();
         await _operation.WaitAsync();
@@ -305,9 +377,9 @@ public partial class MainWindow : Window
         catch { /* Closing must still release native resources if settings cannot be saved. */ }
         finally
         {
-            _closed = true; _hotkeys?.Dispose(); _ocr.Dispose(); _client.Dispose(); _floating.CloseForShutdown(); _operation.Release(); _allowClose = true;
+            _closed = true; _hotkeys?.Dispose(); _tray?.Dispose(); _ocr.Dispose(); _client.Dispose(); _floating.CloseForShutdown(); _operation.Release(); _allowClose = true;
             // All awaited work can complete synchronously. Leave the first Closing event before closing again.
-            _ = Dispatcher.BeginInvoke(new Action(Close));
+            _ = Dispatcher.BeginInvoke(new Action(() => { Close(); if (System.Windows.Application.Current is App app) app.Shutdown(_exitCode); }));
         }
     }
     private static string SafeMessage(Exception error) => error switch

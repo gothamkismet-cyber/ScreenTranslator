@@ -1,5 +1,5 @@
 #requires -Version 7.2
-param([string]$Version = '0.1.0')
+param([string]$Version = '0.2.0')
 $ErrorActionPreference = 'Stop'
 $translatorRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw '版本需要三段数字。' }

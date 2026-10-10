@@ -15,6 +15,7 @@ internal static class Program
         if (args.Contains("--soak")) return SoakChecks.Run(Path.GetFullPath(args[1]), args.Length > 2 ? int.Parse(args[2]) : 1200);
         if (args.Contains("--exclusion")) return ExclusionChecks.Run(Path.GetFullPath(args[1]));
         if (args.Contains("--main-flow")) return MainFlowChecks.Run(Path.GetFullPath(args[1]));
+        if (args.Contains("--window-flow")) return WindowFlowChecks.Run(Path.GetFullPath(args[1]));
         return RunAsync(args).GetAwaiter().GetResult();
     }
 

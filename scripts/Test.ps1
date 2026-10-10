@@ -1,4 +1,4 @@
-﻿param([ValidateSet('quick','ocr','protocol','session','desktop','exclusion','main-flow','ui','soak')][string]$Mode = 'quick')
+﻿param([ValidateSet('quick','ocr','protocol','session','desktop','exclusion','main-flow','window-flow','ui','soak')][string]$Mode = 'quick')
 $ErrorActionPreference = 'Stop'
 $translatorRoot = Split-Path -Parent $PSScriptRoot
 $translatorDotnet = Join-Path $translatorRoot '.tools\dotnet\dotnet.exe'

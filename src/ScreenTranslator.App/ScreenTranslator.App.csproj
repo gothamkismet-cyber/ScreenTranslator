@@ -14,7 +14,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <AssemblyName>ScreenTranslator</AssemblyName>
     <RootNamespace>ScreenTranslator</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <!-- This is a WPF application; WinForms is used only for monitor enumeration. WPF DPI is declared in the manifest. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>

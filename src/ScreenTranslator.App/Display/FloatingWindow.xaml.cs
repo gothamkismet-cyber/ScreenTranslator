@@ -10,13 +10,19 @@ namespace ScreenTranslator.Display;
 
 public partial class FloatingWindow : Window
 {
-    private const string EmptyHint = "圈选屏幕区域后，中文会显示在这里。";
+    private const string EmptyHint = "选择窗口或框选区域后，中文会显示在这里。";
     private const string WaitingHint = "等待译文…";
     private const string CopyGlyph = "";
     private readonly DispatcherTimer _copiedReset = new() { Interval = TimeSpan.FromSeconds(1.4) };
     private bool _allowClose;
     public bool CaptureExcluded { get; private set; }
     public event Action? PauseRequested;
+    public event Action? MainRequested;
+    public event Action? ExitRequested;
+    public event Action? WindowRequested;
+    public event Action? RegionRequested;
+    public event Action? RefreshRequested;
+    public event Action? SettingsRequested;
     public FloatingWindow()
     {
         InitializeComponent();
@@ -42,6 +48,13 @@ public partial class FloatingWindow : Window
     private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e) { if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove(); }
     private void Hide_Click(object sender, RoutedEventArgs e) => Hide();
     private void Pause_Click(object sender, RoutedEventArgs e) => PauseRequested?.Invoke();
+    private void Main_Click(object sender, RoutedEventArgs e) => MainRequested?.Invoke();
+    private void Exit_Click(object sender, RoutedEventArgs e) => ExitRequested?.Invoke();
+    private void Window_Click(object sender, RoutedEventArgs e) => WindowRequested?.Invoke();
+    private void Region_Click(object sender, RoutedEventArgs e) => RegionRequested?.Invoke();
+    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshRequested?.Invoke();
+    private void Settings_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
+    private void More_Click(object sender, RoutedEventArgs e) { MoreMenu.PlacementTarget = MoreButton; MoreMenu.IsOpen = true; }
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
         try

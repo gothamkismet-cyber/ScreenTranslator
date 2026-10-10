@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using ScreenTranslator.Capture;
+using ScreenTranslator.Display;
 using ScreenTranslator.Ocr;
 using ScreenTranslator.Session;
 using ScreenTranslator.Settings;
@@ -66,16 +67,64 @@ internal static class MainFlowChecks
                 ((Button)main.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
                 await SessionChecks.Until(() => !session.Paused);
                 var closed = false; main.Closed += (_, _) => closed = true;
-                main.Close(); await SessionChecks.Until(() => closed);
-                rows.Add(new { check = "close during active capture cleans up and completes without recursive Closing error", passed = true });
+                var floating = (FloatingWindow)Field(main, "_floating").GetValue(main)!;
+                main.Close();
+                ProtocolChecks.Assert(!main.IsVisible && !closed && floating.IsVisible && !session.Paused && floating.Owner is null);
+                text.Text = Program.Samples(SourceLanguage.Korean)[3]; source.UpdateLayout();
+                await SessionChecks.Until(() => Normalize(session.Current.Original) == Normalize(text.Text) && session.Current.Translation == LoopbackServer.Expected(session.Current.Original));
+                rows.Add(new { check = "close main UI while capturing leaves independent floating UI alive and translating new text", passed = true });
+                ((Button)floating.FindName("MainButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                ProtocolChecks.Assert(main.IsVisible);
+                main.WindowState = WindowState.Minimized; await Task.Delay(200);
+                ProtocolChecks.Assert(floating.IsVisible && !session.Paused);
+                rows.Add(new { check = "floating restores main UI and stays visible when main is minimized", passed = true });
+                main.ShowMainWindow(); floating.Close(); main.Close();
+                ProtocolChecks.Assert(!main.IsVisible && !floating.IsVisible && !closed && !session.Paused);
+                text.Text = Program.Samples(SourceLanguage.Korean)[4]; source.UpdateLayout();
+                await SessionChecks.Until(() => Normalize(session.Current.Original) == Normalize(text.Text) && session.Current.Translation == LoopbackServer.Expected(session.Current.Original));
+                var tray = Field(main, "_tray").GetValue(main)!;
+                var menu = (System.Windows.Forms.ContextMenuStrip)Field(tray, "_menu").GetValue(tray)!;
+                menu.Items.Cast<System.Windows.Forms.ToolStripItem>().Single(item => item.Text == "打开主界面").PerformClick();
+                await SessionChecks.Until(() => main.IsVisible);
+                rows.Add(new { check = "hiding both interfaces keeps capture alive; actual tray menu restores main UI", passed = true });
+                main.ExitApplication(); await SessionChecks.Until(() => closed);
+                rows.Add(new { check = "explicit exit during active capture cleans up without recursive Closing error", passed = true });
+                await ExitDuringSelectionAsync(store, region: false);
+                rows.Add(new { check = "explicit exit while window picker is open closes dialog and completes cleanup", passed = true });
+                await ExitDuringSelectionAsync(store, region: true);
+                rows.Add(new { check = "explicit exit while rectangle selection is open closes all overlays and completes cleanup", passed = true });
             }
-            catch (Exception error) { passed = false; rows.Add(new { check = "exception", passed = false, error = error.GetType().Name, message = error.Message }); main?.Close(); }
+            catch (Exception error) { passed = false; rows.Add(new { check = "exception", passed = false, error = error.GetType().Name, message = error.Message }); main?.ExitApplication(); }
             finally
             {
-                source.Close(); File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new { test = "Actual product main-window actions with synthetic screen text and loopback HTTP", utcTime = DateTimeOffset.UtcNow, passed, rows }, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })); application.Shutdown(passed ? 0 : 1);
+                source.Close(); File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new { test = "Actual product main-window actions with synthetic screen text and loopback HTTP", utcTime = DateTimeOffset.UtcNow, realAiCalls = 0, normalUserSettingsTouched = false, passed, rows }, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })); application.Shutdown(passed ? 0 : 1);
             }
         };
         source.Show(); return application.Run();
+    }
+    private static async Task ExitDuringSelectionAsync(SettingsStore store, bool region)
+    {
+        var main = new ScreenTranslator.MainWindow(store); main.Show();
+        var closed = false; main.Closed += (_, _) => closed = true;
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+        timer.Tick += (_, _) =>
+        {
+            var selection = System.Windows.Application.Current.Windows.Cast<Window>().FirstOrDefault(window => region ? window.GetType().Name == "SelectionWindow" : window is WindowSelector);
+            if (selection is null || !selection.IsLoaded) return;
+            timer.Stop();
+            try { main.ExitApplication(); ready.SetResult(); }
+            catch (Exception error) { selection.Close(); ready.SetException(error); }
+        };
+        timer.Start();
+        try
+        {
+            ((Button)main.FindName(region ? "SelectButton" : "SelectWindowButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await SessionChecks.Until(() => closed);
+            ProtocolChecks.Assert(!System.Windows.Application.Current.Windows.Cast<Window>().Any(window => window is WindowSelector || window.GetType().Name == "SelectionWindow"));
+        }
+        finally { timer.Stop(); main.ExitApplication(); }
     }
     private static FieldInfo Field(object value, string name) => value.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!;
     private static string Normalize(string value) => string.Concat(value.Where(c => !char.IsWhiteSpace(c)));
